@@ -1,0 +1,60 @@
+#!/bin/bash
+
+baseurl="https://scp-wiki.wikidot.com/scp"
+query=$(printf '%s' "$*")
+smul="$(tput smul)"
+bold="$(tput bold)"
+italic="$(tput sitm)"
+cyan="$(tput setaf 37)"
+red="$(tput setaf 124)"
+normal="$(tput sgr 0)"
+
+item=$(curl -s $baseurl-$query |
+	grep -Po "(<p><strong>Item #:<\/strong> SCP-).*?(<\/p>)" |
+	sed -r "s/<strong>/\n $cyan$bold/g;
+	s/<\/strong>/$normal/g;
+	s/<[^>]*>//g")
+
+class=$(curl -s $baseurl-$query |
+	sed -r "s/<span style=\"text-decoration: line-through;\">/$red/g;
+	s/<\/span>/$normal/g" |
+	grep -Po "(<p><strong>Object Class:<\/strong>).*?(<\/p>)" |
+	sed -r "s/<strong>/\n $cyan$bold/g;
+	s/<\/strong>/$normal/g;
+	s/<[^>]*>//g")
+
+containment=$(curl -s $baseurl-$query |
+	tr -d '\n' |
+	sed -r "s/<span style=\"text-decoration: line-through;\">/$red/g;
+	s/<\/span>/$normal /g" |
+	grep -Po "(<p><strong>)Special Containment Procedures:<\/strong>.*?(<\/p><p><strong>)" |
+	sed -r "s/<strong>/\n $cyan$bold/g;
+	s/<\/strong>/$normal/g;
+	s/<[^>]*>//g")
+
+description=$(curl -s $baseurl-$query |
+	tr -d '\n' |
+	sed -r "s/<span style=\"text-decoration: line-through;\">/$red/g;
+	s/<\/span>/$normal/g" |
+	grep -Po "(<p><strong>)Description:<\/strong>.*?(<\/p><p><strong>)" |
+	sed -r "s/<strong>/\n $cyan$bold/g;
+	s/<\/strong>/$normal/g;
+	s/<[^>]*>//g")
+
+if [ -z "$item" ] && [ -z "$class" ]; then
+	imgitem=$(curl -s $baseurl-$query |
+		grep -Po "(<div class=\"itemnum EN\">Item #: SCP-).*?(<\/div>)" |
+		sed -r "s/<div class=\"itemnum EN\">/\n $cyan$bold/g;
+		s/Item #: /Item #:$normal /g;
+		s/<[^>]*>//g")
+	imgclass=$(curl -s $baseurl-$query |
+		grep -Po "(<div class=\"obj-text\">).*?(<\/div>)" |
+		sed -r "s/<div class=\"obj-text\">/\n $cyan$bold\\Object Class: /g;
+		s/Object Class: /Object Class:$normal /g;
+		s/<[^>]*>//g")
+		
+	echo -e "$imgitem\n$imgclass\n$containment\n$description" | sed "s/&#160;/ /g"
+else
+	echo -e "$item\n$class\n$containment\n$description" | sed "s/&#160;/ /g"
+fi
+
